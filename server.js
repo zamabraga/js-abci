@@ -1,6 +1,58 @@
-var net = require("net");
-var types = require("./types");
-var Connection = require("./connection").Connection;
+"use strict";
+
+const 
+  net = require("net")
+  ,types = require("./types")
+  ,Connection = require("./connection").Connection;
+
+// Takes an application and handles ABCI connection
+// which invoke methods on the app
+class Server{
+  constructor(app){
+    super()
+    // set the app for the socket handler
+    this.app = app;      
+
+    // create a server by providing callback for 
+    // accepting new connection and callbacks for 
+    // connection events ('data', 'end', etc.)
+    this.createServer();
+  }
+
+  createServer() {
+    let app = this.app;
+  
+    // Define the socket handler
+    this.server = net.createServer(function(socket) {
+      socket.name = socket.remoteAddress + ":" + socket.remotePort;
+      console.log("new connection from: %s", socket.name);
+  
+      this.conn = new Connection(socket);
+
+      this.conn.on('message',(msgType)=>{
+        switch(msgType){
+          case 'flush':
+            let res = new types.Response({
+              flush: new types.ResponseFlush(),
+            });
+            this.conn.writeMessage(res);
+            this.conn.flush();
+      
+            //app flush hteir on state
+            this.app.emit(msgType);          
+          break;
+          case 'echo':
+            let res = new types.Response({
+              echo: new types.ResponseEcho({message: req.echo.message})
+            });
+            this.writeMessage(res);
+          break;
+        }
+      });
+
+    });
+  }
+}
 
 // Takes an application and handles ABCI connection
 // which invoke methods on the app
@@ -74,6 +126,8 @@ Server.prototype.createServer = function() {
         }
       }
     });
+
+
   });
 }
 
