@@ -1,15 +1,12 @@
-function xport(exports, m) {
-  for (var key in m) {
-    exports[key] = m[key];
-  }
-}
+"use strict";
 
-var proto = require("protobufjs");
-var protoPath = require("path").join(__dirname, "types.proto"); // TODO: better to just compile this into a js file.
-var builder = proto.loadProtoFile(protoPath);
-var types = builder.build("types");
+const 
+  proto = require("protobufjs")
+  ,protoPath = require("path").join(__dirname, "types.proto") // TODO: better to just compile this into a js file.
+  ,builder = proto.loadProtoFile(protoPath)
+  ,types = builder.build("types");
 
-var reqMethodLookup = {};
+let reqMethodLookup = {};
 reqMethodLookup["info"]        = "info";
 reqMethodLookup["set_option"]  = "setOption";
 reqMethodLookup["deliver_tx"]  = "deliverTx";
@@ -20,7 +17,7 @@ reqMethodLookup["init_chain"]  = "initChain";
 reqMethodLookup["begin_block"] = "beginBlock";
 reqMethodLookup["end_block"]   = "endBlock";
 
-var resMessageLookup = {};
+let resMessageLookup = {};
 resMessageLookup["info"]        = types.ResponseInfo;
 resMessageLookup["set_option"]  = types.ResponseSetOption;
 resMessageLookup["deliver_tx"]  = types.ResponseDeliverTx;

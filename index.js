@@ -7,4 +7,5 @@ function xport(exports, m) {
 module.exports = {};
 xport(module.exports, require('./types'));
 xport(module.exports, require('./server'));
+xport(module.exports, require('./application'));
 xport(module.exports, require('./client'));
