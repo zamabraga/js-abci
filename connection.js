@@ -130,7 +130,6 @@ class Connection extends events.EventEmitter{
         resCb({});
       } 
       else {
-        console.log("%s: Method: %s",self.socket.name,self.msgType);
         let reqValue = req[self.msgType];
         let res = self.app[reqMethod].call(self.app, req, resCb);
         if (res != undefined) {

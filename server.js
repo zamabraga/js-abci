@@ -24,8 +24,6 @@ class Server{
     // Define the socket handler
     this.server = net.createServer(function(socket) {
       socket.name = socket.remoteAddress + ":" + socket.remotePort;
-      console.log("new connection from", socket.name);
-
       let conn = new Connection(socket, self.app);
     });
   }

@@ -10,18 +10,26 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   info(req, cb) {
+    let self = this;
+    console.log("hashes:%d, txs:%d", this.hashCount, this.txCount);
     return cb({
-      data: util.format("hashes:%d, txs:%d", this.hashCount, this.txCount),
+      data: util.format("hashes:%d, txs:%d", self.hashCount, self.txCount),
     });
   }
-
-  set_option(req, cb) {
+  beginBlock(req, cb) {
+    return cb({});
+  }
+  endBlock(req, cb) {
+    return cb({});
+  }
+  setOption(req, cb) {
+    let self = this;
     if (req.set_option.key == "serial") {
       if (req.set_option.value == "on") {
-        this.serial = true;
+        self.serial = true;
         return cb({log:"ok"});
       } else if (req.set_option.value == "off") {
-        this.serial = false;
+        self.serial = false;
         return cb({log:"ok"});
       } else {
         return cb({log:"Unexpected value "+req.set_option.value});
@@ -31,45 +39,51 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   deliverTx(req, cb) {
-    var txBytes = req.deliver_tx.tx.toBuffer();
-    if (this.serial) {
+    let self = this;
+    let txBytes = req.deliver_tx.tx.toBuffer();
+    if (self.serial) {
       if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
-        var hexString = txBytes.toString("ascii", 2);
-        var hexBytes = new Buffer(hexString, "hex");
+        let hexString = txBytes.toString("ascii", 2);
+        let hexBytes = Buffer.from(hexString, "hex");
         txBytes = hexBytes;
       }	
       var txValue = txBytes.readUIntBE(0, txBytes.length);
-      if (txValue != this.txCount){
+      if (txValue != self.txCount){
         return cb({code:abci.CodeType.BadNonce, log:"Nonce is invalid. Got "+txValue+", expected "+this.txCount});
       }
     }
-    this.txCount += 1;
+    self.txCount += 1;
     return cb({code:abci.CodeType_OK});
   }
 
   checkTx(req, cb) {
-    var txBytes = req.check_tx.tx.toBuffer();
-    if (this.serial) {
+    let self = this;
+    let txBytes = req.check_tx.tx.toBuffer();
+    if (self.serial) {
       if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
-        var hexString = txBytes.toString("ascii", 2);
-        var hexBytes = new Buffer(hexString, "hex");
+        let hexString = txBytes.toString("ascii", 2);
+        let hexBytes = Buffer.from(hexString, "hex");
         txBytes = hexBytes;
       }	
-      var txValue = txBytes.readUIntBE(0, txBytes.length);
-      if (txValue < this.txCount){
+      let txValue = txBytes.readUIntBE(0, txBytes.length);
+      if (txValue < self.txCount){
         return cb({code:abci.CodeType.BadNonce, log:"Nonce is too low. Got "+txValue+", expected >= "+this.txCount});
       }
     }
+
     return cb({code:abci.CodeType_OK});
   }
 
   commit(req, cb) {
-    this.hashCount += 1;
-    if (this.txCount == 0){
+    let self = this;
+    console.log("commit: %j",req);
+
+    self.hashCount += 1;
+    if (self.txCount == 0){
       return cb({log:"Zero tx count; hash is empth"});
     }
-    var buf = new Buffer(8);
-    buf.writeIntBE(this.txCount, 0, 8);
+    let buf = Buffer.alloc(8);
+    buf.writeIntBE(self.txCount, 0, 8);
     return cb({data:buf});
   }
 
@@ -77,81 +91,6 @@ class CounterApp extends abci.ABCIApplication{
     return cb({code:abci.CodeType_OK, log:"Query not yet supported"});
   }
 }
-
-// function CounterApp(){
-// 	this.hashCount = 0;
-// 	this.txCount = 0;
-//   this.serial = true;
-// };
-
-// CounterApp.prototype.info = function(req, cb) {
-//   return cb({
-//     data: util.format("hashes:%d, txs:%d", this.hashCount, this.txCount),
-//   });
-
-// }
-
-// CounterApp.prototype.set_option = function(req, cb) {
-//   if (req.set_option.key == "serial") {
-//     if (req.set_option.value == "on") {
-//       this.serial = true;
-//       return cb({log:"ok"});
-//     } else if (req.set_option.value == "off") {
-//       this.serial = false;
-//       return cb({log:"ok"});
-//     } else {
-//       return cb({log:"Unexpected value "+req.set_option.value});
-//     }
-//   }
-//   return cb({log: "Unexpected key "+req.set_option.key});
-// }
-
-// CounterApp.prototype.deliver_tx = function(req, cb) {
-//   var txBytes = req.deliver_tx.tx.toBuffer();
-//   if (this.serial) {
-//     if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
-//       var hexString = txBytes.toString("ascii", 2);
-//       var hexBytes = new Buffer(hexString, "hex");
-//       txBytes = hexBytes;
-//     }	
-//     var txValue = txBytes.readUIntBE(0, txBytes.length);
-//     if (txValue != this.txCount){
-//       return cb({code:abci.CodeType.BadNonce, log:"Nonce is invalid. Got "+txValue+", expected "+this.txCount});
-//     }
-//   }
-//   this.txCount += 1;
-//   return cb({code:abci.CodeType_OK});
-// }
-
-// CounterApp.prototype.check_tx = function(req, cb) {
-//   var txBytes = req.check_tx.tx.toBuffer();
-// 	if (this.serial) {
-// 		if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
-//       var hexString = txBytes.toString("ascii", 2);
-//       var hexBytes = new Buffer(hexString, "hex");
-//       txBytes = hexBytes;
-// 		}	
-//     var txValue = txBytes.readUIntBE(0, txBytes.length);
-// 		if (txValue < this.txCount){
-//       return cb({code:abci.CodeType.BadNonce, log:"Nonce is too low. Got "+txValue+", expected >= "+this.txCount});
-// 		}
-// 	}
-// 	return cb({code:abci.CodeType_OK});
-// }
-
-// CounterApp.prototype.commit = function(req, cb) {
-// 	this.hashCount += 1;
-// 	if (this.txCount == 0){
-//     return cb({log:"Zero tx count; hash is empth"});
-// 	}
-//   var buf = new Buffer(8);
-//   buf.writeIntBE(this.txCount, 0, 8);
-//   return cb({data:buf});
-// }
-
-// CounterApp.prototype.query = function(req, cb) {
-//   return cb({code:abci.CodeType_OK, log:"Query not yet supported"});
-// }
 
 console.log("Counter app in Javascript");
 
