@@ -39,6 +39,8 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   deliverTx(req, cb) {
+    console.log("commit: %j",req);
+    
     let self = this;
     let txBytes = req.deliver_tx.tx.toBuffer();
     if (self.serial) {
@@ -76,7 +78,7 @@ class CounterApp extends abci.ABCIApplication{
 
   commit(req, cb) {
     let self = this;
-    console.log("commit: %j",req);
+    // console.log("commit: %j",req);
 
     self.hashCount += 1;
     if (self.txCount == 0){
