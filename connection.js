@@ -29,7 +29,7 @@ class Connection extends events.EventEmitter{
     });
 
     self.socket.on('end', ()=>{
-      console.log("%s: connection ended". this.socket.name);
+      console.log("%s: connection ended", self.socket.name);
     });
   }
 
@@ -84,15 +84,15 @@ class Connection extends events.EventEmitter{
     try {
 
       let req = types.Request.decode(msgBytes);
-      let msgType = req.value;
+      self.msgType = req.value;
 
       if(!self.alreadyNamed){
-        self.updateName(msgType);
+        self.updateName(self.msgType);
       }
 
       // Special messages.
       // NOTE: msgs are length prefixed
-      if (msgType == "flush") {
+      if (self.msgType == "flush") {
         let res = new types.Response({
           flush: new types.ResponseFlush(),
         });
@@ -100,31 +100,44 @@ class Connection extends events.EventEmitter{
         self.flush();
         return self.resumeDataReading();
       } 
-      else if (msgType == "echo") {
+      else if (self.msgType == "echo") {
         let res = new types.Response({
           echo: new types.ResponseEcho({message: req.echo.message})
         });
         self.writeMessage(res);
         return self.resumeDataReading();
       }
-      else{
-        // Call app functio
-        var reqMethod = types.reqMethodLookup[msgType];
-        if (!reqMethod) {
-          throw "Unexpected request type "+msgType;
-        }
-        if (!self.app[reqMethod]) {
-          console.log("%s: Method not implemented: %s",self.socket.name,reqMethod);
-          self.buildMessage({});
-        } 
-        else {
-          var reqValue = req[msgType];
-          var res = self.app.emit(self.app, req, self.buildMessage);
-          if (res != undefined) {
-            console.log("%s: Message handler shouldn't return anything!",self.socket.name);
-          }
+      
+      let resCb = function(resObj){
+        let resMessageType = types.resMessageLookup[self.msgType];
+        let res = new types.Response();
+        let resValue = new resMessageType(resObj);
+        res.set(self.msgType, resValue);
+    
+        self.writeMessage(res);
+        self.resumeDataReading();
+        return;
+      }
+
+      // Call app functio
+      let reqMethod = types.reqMethodLookup[self.msgType];
+      // console.log("%s: Method: %s",self.socket.name,reqMethod);
+      if (!reqMethod) {
+        throw "Unexpected request type "+self.msgType;
+      }
+      if (!self.app[reqMethod]) {
+        console.log("%s: Method not implemented: %s",self.socket.name,reqMethod);
+        resCb({});
+      } 
+      else {
+        console.log("%s: Method: %s",self.socket.name,self.msgType);
+        let reqValue = req[self.msgType];
+        let res = self.app[reqMethod].call(self.app, req, resCb);
+        if (res != undefined) {
+          console.log("%s: Message handler shouldn't return anything: %j",self.socket.name, res);
         }
       }
+    
     } 
     catch(e) {
       if (e.stack) {
@@ -133,16 +146,7 @@ class Connection extends events.EventEmitter{
       console.log("%s: FATAL ERROR: ",self.socket.name, e);
     }
   }
- 
-  buildMessage(resObj){
-    let resMessageType = types.resMessageLookup[msgType];
-    let res = new types.Response();
-    let resValue = new resMessageType(resObj);
-    res.set(msgType, resValue);
 
-    this.writeMessage(res);
-    this.resumeDataReading();
-  }
   writeMessage(msg) {
     let self = this;
     let msgBytes = msg.encode().toBuffer();

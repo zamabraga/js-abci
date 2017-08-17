@@ -30,7 +30,7 @@ class CounterApp extends abci.ABCIApplication{
     return cb({log: "Unexpected key "+req.set_option.key});
   }
 
-  deliver_tx(req, cb) {
+  deliverTx(req, cb) {
     var txBytes = req.deliver_tx.tx.toBuffer();
     if (this.serial) {
       if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
@@ -47,7 +47,7 @@ class CounterApp extends abci.ABCIApplication{
     return cb({code:abci.CodeType_OK});
   }
 
-  check_tx(req, cb) {
+  checkTx(req, cb) {
     var txBytes = req.check_tx.tx.toBuffer();
     if (this.serial) {
       if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
