@@ -82,10 +82,10 @@ class Connection extends events.EventEmitter{
     self.waitingResult = true;
     self.socket.pause();
     try {
-
+      
       let req = types.Request.decode(msgBytes);
       self.msgType = req.value;
-
+      // console.log("packet: %j",req)
       if(!self.alreadyNamed){
         self.updateName(self.msgType);
       }

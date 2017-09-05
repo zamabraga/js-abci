@@ -11,18 +11,30 @@ class CounterApp extends abci.ABCIApplication{
 
   info(req, cb) {
     let self = this;
-    console.log("hashes:%d, txs:%d", this.hashCount, this.txCount);
+    console.log("info %j", req.info);
+    console.log("hashes:%d, txs:%d", self.hashCount, self.txCount);
     return cb({
       data: util.format("hashes:%d, txs:%d", self.hashCount, self.txCount),
     });
   }
   beginBlock(req, cb) {
+    let self = this;
+    // let hash =
+    // let header , chain_id
+    // let last_block_id, hash
+    // let last_commit_hash 
+    // console.log("\nblock init: %j", req.begin_block.hash);
+    // console.log("\nblock init: %j", req.begin_block);
+    // console.log("\nblock init: %j", req.begin_block);
+    // console.log("\nblock init: %j", req.begin_block);
     return cb({});
   }
   endBlock(req, cb) {
+    // console.log("\nblock end: %j", req);
     return cb({});
   }
   setOption(req, cb) {
+    console.log("\ndeliver: %j",req.set_option);
     let self = this;
     if (req.set_option.key == "serial") {
       if (req.set_option.value == "on") {
@@ -39,7 +51,7 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   deliverTx(req, cb) {
-    console.log("commit: %j",req);
+    console.log("\ndeliver: %j",req.deliver_tx);
     
     let self = this;
     let txBytes = req.deliver_tx.tx.toBuffer();
@@ -60,6 +72,8 @@ class CounterApp extends abci.ABCIApplication{
 
   checkTx(req, cb) {
     let self = this;
+    console.log("\check tx: %j",req.check_tx);
+
     let txBytes = req.check_tx.tx.toBuffer();
     if (self.serial) {
       if (txBytes.length >= 2 && txBytes.slice(0, 2) == "0x") {
@@ -78,7 +92,7 @@ class CounterApp extends abci.ABCIApplication{
 
   commit(req, cb) {
     let self = this;
-    // console.log("commit: %j",req);
+    console.log("commit: %j",req.commit);
 
     self.hashCount += 1;
     if (self.txCount == 0){
@@ -90,6 +104,17 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   query(req, cb) {
+    let self = this;
+    let reqQuery = req.query;
+    switch(reqQuery.path){
+      case 'hash':
+        return cb({value:self.hashCount});
+      case 'tx':
+        return cb({value:self.txCount});
+      default:
+        return cb({log: "Invalid query path. Expected hash or tx, got " + reqQuery.path})
+    }
+
     return cb({code:abci.CodeType_OK, log:"Query not yet supported"});
   }
 }
