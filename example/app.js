@@ -15,18 +15,27 @@ class CounterApp extends abci.ABCIApplication{
     console.log("hashes:%d, txs:%d", self.hashCount, self.txCount);
     return cb({
       data: util.format("hashes:%d, txs:%d", self.hashCount, self.txCount),
+      last_block_height: self.height,
+      last_block_app_hash: self.app_hash
     });
   }
   beginBlock(req, cb) {
     let self = this;
-    // let hash =
-    // let header , chain_id
-    // let last_block_id, hash
-    // let last_commit_hash 
-    // console.log("\nblock init: %j", req.begin_block.hash);
-    // console.log("\nblock init: %j", req.begin_block);
-    // console.log("\nblock init: %j", req.begin_block);
-    // console.log("\nblock init: %j", req.begin_block);
+
+    self.height = req.begin_block.header.height;
+    self.last_block_id = req.begin_block.header.last_block_id.hash;
+    self.last_commit_hash = req.begin_block.header.last_commit_hash;
+    self.data_hash = req.begin_block.header.data_hash;
+    self.validators_hash = req.begin_block.header.validators_hash;
+    self.app_hash = req.begin_block.header.app_hash;
+
+    console.log("\nblock height: %j", self.height);
+    console.log("\nblock last_block_id: %j", self.last_block_id);
+    console.log("\nblock last_commit_hash: %j", self.last_commit_hash);
+    console.log("\nblock data_hash: %j", self.data_hash);
+    console.log("\nblock validators_hash: %j", self.validators_hash);
+    console.log("\nblock app_hash: %j", self.app_hash);
+
     return cb({});
   }
   endBlock(req, cb) {
