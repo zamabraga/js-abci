@@ -60,7 +60,7 @@ class CounterApp extends abci.ABCIApplication{
     self.blockStore.height = self.height;
     self.blockStore.last_block_id = self.last_block_id.toString("hex");
     self.blockStore.last_commit_hash = self.last_commit_hash.toString("hex");
-    self.blockStore.app_hash = self.app_hash.toString("hex");
+    // self.blockStore.app_hash = self.app_hash.toString("hex");
     // console.log("\nblock height: %s", self.height.toString('hex'));
     // console.log("\nblock last_block_id: %s", self.last_block_id.hash.toString('hex'));
     // console.log("\nblock last_commit_hash: %s", self.last_commit_hash.toString('hex'));
@@ -72,9 +72,9 @@ class CounterApp extends abci.ABCIApplication{
   }
   endBlock(req, cb) {
     let self = this;
-    self.blockStore.app_hash = self.app_hash.toString('hex');
+    self.app_hash = self.app_hash.toString('hex');
     this.isEndBlock = true;
-    console.log("\nblock end: %j", self.blockStore);
+    // console.log("\nblock end: %j", self.blockStore);
 
     return cb({});
   }
