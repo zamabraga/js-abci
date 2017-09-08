@@ -29,7 +29,7 @@ class CounterApp extends abci.ABCIApplication{
 
   checkTx(req, cb) {
     let self = this;
-    console.log("\check tx: %j",req.check_tx);
+    console.log("\ncheck tx: %j",req.check_tx);
 
     let txBytes = req.check_tx.tx.toBuffer();
     if (self.serial) {
@@ -42,6 +42,8 @@ class CounterApp extends abci.ABCIApplication{
       if (txValue < self.txCount){
         return cb({code:abci.CodeType.BadNonce, log:"Nonce is too low. Got "+txValue+", expected >= "+this.txCount});
       }
+
+      console.log("\ncheck tx count update: %d \n",self.txCount);
     }
 
     return cb({code:abci.CodeType_OK});
@@ -60,7 +62,7 @@ class CounterApp extends abci.ABCIApplication{
     self.blockStore.height = self.height;
     self.blockStore.last_block_id = self.last_block_id.toString("hex");
     self.blockStore.last_commit_hash = self.last_commit_hash.toString("hex");
-    // self.blockStore.app_hash = self.app_hash.toString("hex");
+    self.blockStore.app_hash = self.app_hash.toString("hex");
     // console.log("\nblock height: %s", self.height.toString('hex'));
     // console.log("\nblock last_block_id: %s", self.last_block_id.hash.toString('hex'));
     // console.log("\nblock last_commit_hash: %s", self.last_commit_hash.toString('hex'));
@@ -95,10 +97,12 @@ class CounterApp extends abci.ABCIApplication{
         return cb({code:abci.CodeType.BadNonce, log:"Nonce is invalid. Got "+txValue+", expected "+this.txCount});
       }
       self.blockStore.state.push(txValue);
+      self.blockStore.app_hash = self.app_hash.toString('hex');
     }
 
     self.txCount += 1;
-    
+    console.log("\ndeliver hashs: %s",self.txCount);
+
     return cb({code:abci.CodeType_OK});
   }
 
@@ -113,6 +117,7 @@ class CounterApp extends abci.ABCIApplication{
     let buf = Buffer.alloc(8);
     buf.writeIntBE(self.txCount, 0, 8);
 
+    self.blockStore.app_hash = self.app_hash.toString('hex');
     console.log("\commit: %j", self.blockStore);
 
     // console.log("\nblock height: %d", self.height);
