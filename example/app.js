@@ -8,11 +8,8 @@ class CounterApp extends abci.ABCIApplication{
     this.txCount = 0;
     this.serial = true;
     this.blockStore = {state:[],
-      height:0,
-      last_commit_hash:"",
       last_block_id:"",
-      last_commit_hash:"",
-      app_hash:""
+      last_commit_hash:""
     }; 
   }
 
@@ -21,15 +18,12 @@ class CounterApp extends abci.ABCIApplication{
     console.log("info %j", req.info);
     console.log("hashes:%d, txs:%d", self.hashCount, self.txCount);
     return cb({
-      data: util.format("hashes:%d, txs:%d", self.hashCount, self.txCount),
-      last_block_height: self.height,
-      last_block_app_hash: self.app_hash
+      data: util.format("hashes:%s, txs:%d", self.hashCount, self.txCount)
     });
   }
 
   checkTx(req, cb) {
     let self = this;
-    console.log("\ncheck tx: %j",req.check_tx);
 
     let txBytes = req.check_tx.tx.toBuffer();
     if (self.serial) {
@@ -40,10 +34,10 @@ class CounterApp extends abci.ABCIApplication{
       }	
       let txValue = txBytes.readUIntBE(0, txBytes.length);
       if (txValue < self.txCount){
-        return cb({code:abci.CodeType.BadNonce, log:"Nonce is too low. Got "+txValue+", expected >= "+this.txCount});
+        return cb({code:abci.CodeType.BadNonce, log:"Nonce is too low. Got "+txValue+", expected >= "+self.txCount});
       }
 
-      console.log("\ncheck tx count update: %d \n",self.txCount);
+      console.log("\ncheck update: %d %d\n", self.hashCount, self.txCount);      
     }
 
     return cb({code:abci.CodeType_OK});
@@ -52,19 +46,19 @@ class CounterApp extends abci.ABCIApplication{
   beginBlock(req, cb) {
     let self = this;
 
-    self.height = req.begin_block.header.height;
     self.last_block_id = req.begin_block.header.last_block_id.hash;
     self.last_commit_hash = req.begin_block.header.last_commit_hash;
-    self.data_hash = req.begin_block.header.data_hash;
-    self.validators_hash = req.begin_block.header.validators_hash;
+    // self.data_hash = req.begin_block.header.data_hash;
+    // self.validators_hash = req.begin_block.header.validators_hash;
     self.app_hash = req.begin_block.header.app_hash;
 
-    self.blockStore.height = self.height;
     self.blockStore.last_block_id = self.last_block_id.toString("hex");
     self.blockStore.last_commit_hash = self.last_commit_hash.toString("hex");
     self.blockStore.app_hash = self.app_hash.toString("hex");
+
+    console.log("\nblock begin: %j", self.blockStore);
     // console.log("\nblock height: %s", self.height.toString('hex'));
-    // console.log("\nblock last_block_id: %s", self.last_block_id.hash.toString('hex'));
+    // console.log("\nblock last_block_id: %s", self.last_block_id.toString('hex'));
     // console.log("\nblock last_commit_hash: %s", self.last_commit_hash.toString('hex'));
     // console.log("\nblock data_hash: %s", self.data_hash.toString('hex'));
     // console.log("\nblock validators_hash: %s", self.validators_hash.toString('hex'));
@@ -74,15 +68,15 @@ class CounterApp extends abci.ABCIApplication{
   }
   endBlock(req, cb) {
     let self = this;
-    self.app_hash = self.app_hash.toString('hex');
-    this.isEndBlock = true;
+    // self.blockStore.app_hash = self.app_hash.toString('hex');
+    // this.isEndBlock = true;
     // console.log("\nblock end: %j", self.blockStore);
 
     return cb({});
   }
 
   deliverTx(req, cb) {
-    console.log("\ndeliver: %j",req.deliver_tx);
+    // console.log("\ndeliver: %j",req.deliver_tx);
     
     let self = this;
     let txBytes = req.deliver_tx.tx.toBuffer();
@@ -94,31 +88,34 @@ class CounterApp extends abci.ABCIApplication{
       }	
       var txValue = txBytes.readUIntBE(0, txBytes.length);
       if (txValue != self.txCount){
-        return cb({code:abci.CodeType.BadNonce, log:"Nonce is invalid. Got "+txValue+", expected "+this.txCount});
+        return cb({code:abci.CodeType.BadNonce, log:"Nonce is invalid. Got "+txValue+", expected "+self.txCount});
       }
       self.blockStore.state.push(txValue);
-      self.blockStore.app_hash = self.app_hash.toString('hex');
     }
-
+ 
     self.txCount += 1;
-    console.log("\ndeliver hashs: %s",self.txCount);
+
+    console.log("\ndeliver update: %d %d\n",self.hashCount, self.txCount);
 
     return cb({code:abci.CodeType_OK});
   }
 
   commit(req, cb) {
     let self = this;
-    // console.log("commit: %j",req.commit);
 
     self.hashCount += 1;
+
     if (self.txCount == 0){
-      return cb({log:"Zero tx count; hash is empth"});
+      return cb({log:"Zero tx count; hash is empth", code:abci.CodeType_OK});
     }
+
     let buf = Buffer.alloc(8);
     buf.writeIntBE(self.txCount, 0, 8);
 
-    self.blockStore.app_hash = self.app_hash.toString('hex');
+    // self.blockStore.app_hash = self.app_hash.toString('hex');
     console.log("\commit: %j", self.blockStore);
+
+    console.log("\ncommit update: %d %d\n",self.hashCount, self.txCount);
 
     // console.log("\nblock height: %d", self.height);
     // console.log("\nblock last_block_id: %s", self.last_block_id.toString('hex'));
@@ -131,7 +128,7 @@ class CounterApp extends abci.ABCIApplication{
   }
 
   setOption(req, cb) {
-    console.log("\ndeliver: %j",req.set_option);
+    // console.log("\ndeliver: %j",req.set_option);
     let self = this;
     if (req.set_option.key == "serial") {
       if (req.set_option.value == "on") {
@@ -144,22 +141,35 @@ class CounterApp extends abci.ABCIApplication{
         return cb({log:"Unexpected value "+req.set_option.value});
       }
     }
-    return cb({log: "Unexpected key "+req.set_option.key});
+    return cb({log: "Unexpected key "+req.set_option.key,code:abci.CodeType_OK});
   }
 
   query(req, cb) {
+
+    // CodeType          code        = 1;
+    // int64             index       = 2;
+    // bytes             key         = 3;
+    // bytes             value       = 4;
+    // bytes             proof       = 5;
+    // uint64            height      = 6;
+    // string            log         = 7;
+
     let self = this;
     let reqQuery = req.query;
     switch(reqQuery.path){
       case 'hash':
-        return cb({value:self.hashCount});
+        let buf = Buffer.alloc(8);
+        buf.writeIntBE(self.hashCount, 0, 8);
+        return cb({value:buf});
       case 'tx':
         return cb({value:self.txCount});
       default:
         return cb({log: "Invalid query path. Expected hash or tx, got " + reqQuery.path})
     }
 
-    return cb({code:abci.CodeType_OK, log:"Query not yet supported"});
+    console.log("\nquery tx count update: %d %d\n",self.hashCount, self.txCount);
+
+    return cb({log:"Query not yet supported"});
   }
 }
 
