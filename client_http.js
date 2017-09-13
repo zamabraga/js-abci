@@ -4,6 +4,7 @@ const
   types = require("./types")
   ,events = require("events")
   ,http = require('http')
+  , utils = require('utils')
   ;
 
   const options = {
@@ -27,35 +28,73 @@ class Client extends events.EventEmitter{
   }
 
   getStatus(){
-
+    this.makeRequest('status');
+  }
+  
+  getDumpConsensusState(){
+    this.makeRequest('dump_consensus_state');
   }
 
-  getAbciQuery(){
+  getGenesis(){
+    this.makeRequest('genesis');
+  }
 
+  getNetInfo(){
+    this.makeRequest('net_info');
+  }
+
+  getNumUnconfirmedTxs(){
+    this.makeRequest('num_unconfirmed_txs');
+  }
+
+  getUnconfirmedTxs(){
+    this.makeRequest('unconfirmed_txs');
+  }
+
+  getValidators(){
+    this.makeRequest('validators');
+  }
+
+  getAbciQuery(param){
+    let url = utils.format('abci_query?path=%s&data=%s&prove=false',
+    param.path,param.data,param.prove);
+    this.makeRequest(url);
+  }
+  
+  getBlock(param){
+    let url = utils.format('block?height=%d',param.height);
+    this.makeRequest(url);
   }
 
   getBlockchain(param){
-
+    let url = utils.format('blockchain?minHeight=%d&maxHeight=%d',
+                  args.minHeight,args.maxHeight);
+    this.makeRequest(url);
   }
 
   broadcastTxAsync(param){
-
+    let url = utils.format('broadcast_tx_async?tx=%s',param.data);
+    this.makeRequest(url);
   }
 
   broadcastTxSync(param){
-    
+    let url = utils.format('broadcast_tx_sync?tx=%s',param.data);
+    this.makeRequest(url);
   }
 
   broadcastTxCommit(param){
-    
+    let url = utils.format('broadcast_tx_commit?tx=%s',param.data);
+    this.makeRequest(url);
   }
 
-  getTx(tx){
-
+  getTx(param){
+    let url = utils.format('tx?hash=%s',param.hash);
+    this.makeRequest(url);
   }
 
   commit(height){
-
+    let url = utils.format('commit?height=%d',param.height);
+    this.makeRequest(url);
   }
 
   makeRequest(method){
@@ -63,28 +102,30 @@ class Client extends events.EventEmitter{
     let opt = {
       hostname: self._server.host,
       port: self._server.port,
-      path: method,
+      path: '/' + method,
     };
     Object.assign(opt,options);
-    const req = http.request(opt, (res) => {
+    const req = http.get(opt, (res) => {
+      // console.log('abci info: request %j: ', req);
       let self = this;
-      let buffer = [];
-      console.log(`STATUS: ${res.statusCode}`);
-      console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+      self.recvBuf = Buffer.alloc(0);
+      // console.log('STATUS: %j', res.statusCode);
+      // console.log('HEADERS: %j', res.headers);
       res.setEncoding('utf8');
       res.on('data', (chunk) => {
-        console.log('BODY Party: ${chunk}');
-        recvBuf = Buffer.concat([recvBuf, Buffer.from(chunk)]);
+        // console.log('BODY Party: %j', chunk);
+        self.recvBuf = Buffer.concat([self.recvBuf, Buffer.from(chunk)]);
       });
       res.on('end', () => {
-        console.log('BODY Full: ${recvBuf}');
-        self.emit('abci_info', recvBuf);
+        let self = this;
+        // console.log('BODY Full %j:', self.recvBuf);
+        self.emit('abci_info', JSON.parse(self.recvBuf));
       });
     });
     
     req.on('error', (e) => {
-      console.log(`problem with request: ${e.message}`);
-      self.emit('error',e);
+      console.log('problem with request: ${e.message}');
+      self.emit('error', e);
     });
   }
 
@@ -103,7 +144,7 @@ class Client extends events.EventEmitter{
 
 let client = new Client('tcp://localhost:46657');
 client.on('abci_info', (res)=>{
-  console.log('abci info: ${res}');
+  console.log('abci info: %j',res);
 });
 client.getAbciInfo();
 
@@ -112,8 +153,8 @@ const rl = readline.createInterface({
   input: process.stdin
 });
 
+console.log('hit <enter> for quit...!');
 rl.on('line', (line) => {
-  console.log('Have a great day!');
   process.exit(0);
 });
 // process.stdin.setRawMode( true );

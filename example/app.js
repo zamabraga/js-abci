@@ -1,5 +1,8 @@
-var abci = require("../");
-var util = require("util");
+"use strict";
+
+const 
+  abci = require("../"),
+  util = require("util");
 
 class CounterApp extends abci.ABCIApplication{
   constructor(){
@@ -8,7 +11,6 @@ class CounterApp extends abci.ABCIApplication{
     this.txCount = 0;
     this.serial = true;
     this.blockStore = {state:[],
-      last_block_id:"",
       last_commit_hash:""
     }; 
   }
@@ -48,10 +50,9 @@ class CounterApp extends abci.ABCIApplication{
 
     self.last_block_id = req.begin_block.header.last_block_id.hash;
     self.last_commit_hash = req.begin_block.header.last_commit_hash;
-    // self.data_hash = req.begin_block.header.data_hash;
+    self.app_hash = req.begin_block.header.app_hash;
     // self.validators_hash = req.begin_block.header.validators_hash;
     self.app_hash = req.begin_block.header.app_hash;
-
     self.blockStore.last_block_id = self.last_block_id.toString("hex");
     self.blockStore.last_commit_hash = self.last_commit_hash.toString("hex");
     self.blockStore.app_hash = self.app_hash.toString("hex");
@@ -70,7 +71,7 @@ class CounterApp extends abci.ABCIApplication{
     let self = this;
     // self.blockStore.app_hash = self.app_hash.toString('hex');
     // this.isEndBlock = true;
-    // console.log("\nblock end: %j", self.blockStore);
+    // console.log("\nblock end: %j", req.end_block);
 
     return cb({});
   }
@@ -112,17 +113,7 @@ class CounterApp extends abci.ABCIApplication{
     let buf = Buffer.alloc(8);
     buf.writeIntBE(self.txCount, 0, 8);
 
-    // self.blockStore.app_hash = self.app_hash.toString('hex');
-    console.log("\commit: %j", self.blockStore);
-
-    console.log("\ncommit update: %d %d\n",self.hashCount, self.txCount);
-
-    // console.log("\nblock height: %d", self.height);
-    // console.log("\nblock last_block_id: %s", self.last_block_id.toString('hex'));
-    // console.log("\nblock last_commit_hash: %s", self.last_commit_hash.toString('hex'));
-    // console.log("\nblock data_hash: %s", self.data_hash.toString('hex'));
-    // console.log("\nblock validators_hash: %s", self.validators_hash.toString('hex'));
-    // console.log("\nblock app_hash: %s", self.app_hash.toString('hex'));
+    console.log("\ncommit update: %d\n",self.txCount);
 
     return cb({data:buf});
   }
