@@ -4,7 +4,7 @@ const
   types = require("./types")
   ,events = require("events")
   ,http = require('http')
-  , utils = require('utils')
+  ,utils = require('utils')
   ;
 
   const options = {

@@ -2,11 +2,16 @@
 
 const 
   abci = require("../"),
-  util = require("util");
+  util = require("util"),
+  merkle = require('merkle'),
+  merkle_gen = require('merkle-tree-gen')
+
+;
 
 class CounterApp extends abci.ABCIApplication{
   constructor(){
     super();
+    this.merkleCheckTx = 
     this.hashCount = 0;
     this.txCount = 0;
     this.serial = true;
@@ -113,9 +118,22 @@ class CounterApp extends abci.ABCIApplication{
     let buf = Buffer.alloc(8);
     buf.writeIntBE(self.txCount, 0, 8);
 
-    console.log("\ncommit update: %d\n",self.txCount);
+    let args = {
+      array: self.blockStore.state,    // required
+      hashalgo: 'md4'  // optional, defaults to sha256
+    };
 
-    return cb({data:buf});
+    merkle_gen.fromArray(args, (err, tree) =>{
+        if (!err) {
+          // console.log("\nblock: %s\n", err);
+          console.log("\nblock render: %j\n", tree);
+        }
+        // console.log("\nmeckle: %j\n", tree);
+
+        return cb({data:buf});
+    });
+
+    console.log("\ncommit update: %d\n",self.txCount);
   }
 
   setOption(req, cb) {
